@@ -1,30 +1,47 @@
 <script lang="ts">
 	import type { GlobalSDKDailyMotionKey } from './global.types';
 	import type { DailyMotionPlayer, DailyMotionSDKReady } from './dailymotion.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { DailyMotionConfig } from './dailymotion.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { MATCH_URL_DAILYMOTION } from './patterns';
 	import { getSDK, parseStartTime } from './utils';
 
-	export let playing: boolean;
-	export let controls: boolean;
-	export let muted: boolean;
-	export let config: DailyMotionConfig;
-	export let display: string | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		playing: boolean;
+		controls: boolean;
+		muted: boolean;
+		config: DailyMotionConfig;
+		display?: string;
+	}
+
+	let {
+		playing,
+		controls,
+		muted,
+		config,
+		display = undefined,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onSeek,
+		onBuffer,
+		onEnded,
+		onError,
+		onDuration
+	}: Props = $props();
 
 	const SDK_URL = 'https://api.dmcdn.net/all.js';
 	const SDK_GLOBAL: GlobalSDKDailyMotionKey = 'DM';
 	const SDK_GLOBAL_READY: DailyMotionSDKReady = 'dmAsyncInit';
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
-
 	let container: HTMLDivElement;
 	let player: DailyMotionPlayer;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: string) {
@@ -58,39 +75,39 @@
 					},
 					events: {
 						apiready() {
-							dispatch('ready');
+							onReady?.();
 						},
 						seeked() {
-							dispatch('seek', player.currentTime);
+							onSeek?.(player.currentTime);
 						},
 						video_end() {
-							dispatch('ended');
+							onEnded?.();
 						},
 						durationchange: _onDurationChange,
 						pause() {
-							dispatch('pause');
+							onPause?.();
 						},
 						playing() {
-							dispatch('play');
+							onPlay?.();
 						},
 						waiting() {
-							dispatch('buffer');
+							onBuffer?.();
 						},
 						error(error) {
-							dispatch('error', { error });
+							onError?.({ error });
 						}
 					}
 				});
 			},
 			function (error) {
-				dispatch('error', { error });
+				onError?.({ error });
 			}
 		);
 	}
 
 	export function _onDurationChange() {
 		const duration = getDuration();
-		dispatch('duration', duration);
+		onDuration?.(duration);
 	}
 
 	export function play() {

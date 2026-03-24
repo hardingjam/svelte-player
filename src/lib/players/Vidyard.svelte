@@ -1,23 +1,38 @@
 <script lang="ts">
 	import type { GlobalSDKVidyardKey } from './global.types';
 	import type { VidyardSDKReady, VidyardPlayer } from './vidyard.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { VidyardConfig } from './vidyard.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK } from './utils';
 	import { MATCH_URL_VIDYARD } from './patterns';
 
-	export let playing: boolean;
-	export let volume: number | null;
-	export let config: VidyardConfig;
-	export let display: string | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		playing: boolean;
+		volume: number | null;
+		config: VidyardConfig;
+		display?: string;
+	}
+
+	let {
+		playing,
+		volume,
+		config,
+		display = undefined,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onSeek,
+		onEnded,
+		onError,
+		onDuration
+	}: Props = $props();
 
 	const SDK_URL = 'https://play.vidyard.com/embed/v4.js';
 	const SDK_GLOBAL: GlobalSDKVidyardKey = 'VidyardV4';
 	const SDK_GLOBAL_READY: VidyardSDKReady = 'onVidyardAPI';
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let container: HTMLDivElement;
 	let player: VidyardPlayer;
@@ -25,7 +40,7 @@
 	let duration: number | null = null;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: string) {
@@ -44,23 +59,23 @@
 					}
 					player = newPlayer;
 					player.on('ready', function () {
-						dispatch('ready');
+						onReady?.();
 					});
 					player.on('play', function () {
-						dispatch('play');
+						onPlay?.();
 					});
 					player.on('pause', function () {
-						dispatch('pause');
+						onPause?.();
 					});
 					player.on('seek', function (seekTimes) {
-						dispatch('seek', seekTimes);
+						onSeek?.(seekTimes);
 					});
 					player.on('playerComplete', function () {
-						dispatch('ended');
+						onEnded?.();
 					});
 					if (player.metadata !== null) {
 						duration = player.metadata.length_in_seconds;
-						dispatch('duration', player.metadata.length_in_seconds);
+						onDuration?.(player.metadata.length_in_seconds);
 					}
 				}, id);
 				Vidyard.api.renderPlayer({
@@ -71,7 +86,7 @@
 				});
 			},
 			function (error) {
-				dispatch('error', { error });
+				onError?.({ error });
 			}
 		);
 	}

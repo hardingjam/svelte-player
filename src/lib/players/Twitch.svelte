@@ -1,32 +1,47 @@
 <script lang="ts">
 	import type { GlobalSDKTwitchKey } from './global.types';
 	import type { TwitchPlayer } from './twitch.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { TwitchConfig } from './twitch.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK, parseStartTime, randomString } from './utils';
 	import { MATCH_URL_TWITCH_CHANNEL, MATCH_URL_TWITCH_VIDEO } from './patterns';
 
-	export let playing: boolean;
-	export let controls: boolean;
-	export let muted: boolean;
-	export let playsinline: boolean;
-	export let config: TwitchConfig;
+	interface Props extends PlayerCallbackProps {
+		playing: boolean;
+		controls: boolean;
+		muted: boolean;
+		playsinline: boolean;
+		config: TwitchConfig;
+	}
+
+	let {
+		playing,
+		controls,
+		muted,
+		playsinline,
+		config,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onSeek,
+		onEnded,
+		onError,
+		onLoaded
+	}: Props = $props();
 
 	const SDK_URL = 'https://player.twitch.tv/js/embed/v1.js';
 	const SDK_GLOBAL: GlobalSDKTwitchKey = 'Twitch';
 	const PLAYER_ID_PREFIX = 'twitch-player-';
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
-
 	let player: TwitchPlayer;
 
-	$: ({ playerId } = config);
-	$: playerID = playerId || `${PLAYER_ID_PREFIX}${randomString()}`;
+	let playerID = $derived(config.playerId || `${PLAYER_ID_PREFIX}${randomString()}`);
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: string, isReady?: boolean) {
@@ -51,18 +66,17 @@
 								collection: undefined,
 								channel: id,
 								video: undefined
-						  }
+							}
 						: {
 								collection: undefined,
 								channel: undefined,
 								video: id
-						  }),
+							}),
 					height: '100%',
 					width: '100%',
 					playsinline: playsinline,
 					autoplay: playing,
 					muted: muted,
-					// https://github.com/CookPete/react-player/issues/733#issuecomment-549085859
 					controls: isChannel ? true : controls,
 					time: String(parseStartTime(url)),
 					...config.options
@@ -70,31 +84,30 @@
 
 				const { READY, PLAYING, PAUSE, ENDED, ONLINE, OFFLINE, SEEK } = Twitch.Player;
 				player.addEventListener(READY, function () {
-					dispatch('ready');
+					onReady?.();
 				});
 				player.addEventListener(PLAYING, function () {
-					dispatch('play');
+					onPlay?.();
 				});
 				player.addEventListener(PAUSE, function () {
-					dispatch('pause');
+					onPause?.();
 				});
 				player.addEventListener(ENDED, function () {
-					dispatch('ended');
+					onEnded?.();
 				});
 				player.addEventListener(SEEK, function ({ position }) {
-					dispatch('seek', position);
+					onSeek?.(position);
 				});
 
-				// Prevent weird isLoading behaviour when streams are offline
 				player.addEventListener(ONLINE, function () {
-					dispatch('loaded');
+					onLoaded?.();
 				});
 				player.addEventListener(OFFLINE, function () {
-					dispatch('loaded');
+					onLoaded?.();
 				});
 			},
 			function (err) {
-				dispatch('error', {
+				onError?.({
 					error: err
 				});
 			}

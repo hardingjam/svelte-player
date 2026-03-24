@@ -798,8 +798,7 @@ export type WistiaPlayerControlFunctions = WistiaPlayerControlClassFunctions &
 	WistiaPlayerControlCustomInstanceFunctions;
 
 export interface WistiaPlayerControl
-	extends WistiaPlayerControlProperties,
-		WistiaPlayerControlFunctions {}
+	extends WistiaPlayerControlProperties, WistiaPlayerControlFunctions {}
 
 export type WistiaWQ = {
 	id: string;

@@ -1,19 +1,42 @@
 <script lang="ts">
 	import type { GlobalSDKVimeoKey } from './global.types';
 	import type { VimeoPlayer } from './vimeo.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { ViemoConfig } from './vimeo.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK } from './utils';
 
-	export let playing: boolean;
-	export let loop: boolean;
-	export let controls: boolean;
-	export let muted: boolean;
-	export let playsinline: boolean;
-	export let config: ViemoConfig;
-	export let display: string | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		playing: boolean;
+		loop: boolean;
+		controls: boolean;
+		muted: boolean;
+		playsinline: boolean;
+		config: ViemoConfig;
+		display?: string;
+	}
+
+	let {
+		playing,
+		loop,
+		controls,
+		muted,
+		playsinline,
+		config,
+		display = undefined,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onBuffer,
+		onBufferEnd,
+		onSeek,
+		onEnded,
+		onError,
+		onLoaded,
+		onPlaybackRateChange
+	}: Props = $props();
 
 	const SDK_URL = 'https://player.vimeo.com/api/player.js';
 	const SDK_GLOBAL: GlobalSDKVimeoKey = 'Vimeo';
@@ -21,8 +44,6 @@
 	function cleanUrl(url: string) {
 		return url.replace('/manage/videos', '');
 	}
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let container: HTMLDivElement;
 	let player: VimeoPlayer;
@@ -33,7 +54,7 @@
 	let playervolume = 0;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: string) {
@@ -66,27 +87,27 @@
 						}
 					})
 					.catch(function (error) {
-						dispatch('error', { error });
+						onError?.({ error });
 					});
 				player.on('loaded', function () {
-					dispatch('ready');
+					onReady?.();
 					refreshDuration();
 				});
 				player.on('play', function () {
-					dispatch('play');
+					onPlay?.();
 					refreshDuration();
 				});
 				player.on('pause', function () {
-					dispatch('pause');
+					onPause?.();
 				});
 				player.on('seeked', function (e) {
-					dispatch('seek', e.seconds);
+					onSeek?.(e.seconds);
 				});
 				player.on('ended', function () {
-					dispatch('ended');
+					onEnded?.();
 				});
 				player.on('error', function (error) {
-					dispatch('error', { error });
+					onError?.({ error });
 				});
 				player.on('timeupdate', function ({ seconds }) {
 					currentTime = seconds;
@@ -95,20 +116,20 @@
 					secondsLoaded = seconds;
 				});
 				player.on('bufferstart', function () {
-					dispatch('buffer');
+					onBuffer?.();
 				});
 				player.on('bufferend', function () {
-					dispatch('bufferEnd');
+					onBufferEnd?.();
 				});
 				player.on('playbackratechange', function (e) {
-					dispatch('playbackRateChange', e.playbackRate);
+					onPlaybackRateChange?.(e.playbackRate);
 				});
 				player.on('volumechange', function (e) {
 					playervolume = e.volume;
 				});
 			},
 			function (error) {
-				dispatch('error', { error });
+				onError?.({ error });
 			}
 		);
 	}
@@ -123,7 +144,7 @@
 		const promise = player.play();
 		if (promise) {
 			promise.catch(function (error) {
-				dispatch('error', { error });
+				onError?.({ error });
 			});
 		}
 	}

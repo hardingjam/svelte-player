@@ -18,13 +18,11 @@ export type FileMedia = { src: string; type: string };
 
 export type FileUrl = string | string[] | FileMedia[] | MediaStream;
 
-export type FileConfigAttributes =
-	| Omit<HTMLVideoAttributes, `on:${string}`>
-	| Omit<HTMLAudioAttributes, `on:${string}`>;
+export type FileConfigAttributes = HTMLVideoAttributes | HTMLAudioAttributes;
 
 export type FileConfig = {
 	attributes: Partial<FileConfigAttributes>;
-	tracks: Omit<HTMLTrackAttributes, `on:${string}`>[];
+	tracks: HTMLTrackAttributes[];
 	forceVideo: boolean;
 	forceAudio: boolean;
 	forceHLS: boolean;

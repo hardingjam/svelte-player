@@ -1,32 +1,48 @@
 <script lang="ts">
 	import type { GlobalSDKFacebookKey } from './global.types';
 	import type { FacebookPlayer, FacebookSDKReady } from './facebook.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { FacebookConfig } from './facebook.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK, randomString } from './utils';
 
-	export let url: string;
-	export let playing: boolean;
-	export let controls: boolean;
-	export let muted: boolean;
-	export let config: FacebookConfig;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		playing: boolean;
+		controls: boolean;
+		muted: boolean;
+		config: FacebookConfig;
+	}
+
+	let {
+		url,
+		playing,
+		controls,
+		muted,
+		config,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onBuffer,
+		onBufferEnd,
+		onEnded,
+		onError,
+		onLoaded
+	}: Props = $props();
 
 	const SDK_URL = 'https://connect.facebook.net/en_US/sdk.js';
 	const SDK_GLOBAL: GlobalSDKFacebookKey = 'FB';
 	const SDK_GLOBAL_READY: FacebookSDKReady = 'fbAsyncInit';
 	const PLAYER_ID_PREFIX = 'facebook-player-';
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
-
 	let player: FacebookPlayer;
 
-	$: ({ playerId } = config);
-	$: playerID = playerId || `${PLAYER_ID_PREFIX}${randomString()}`;
+	let playerID = $derived(config.playerId || `${PLAYER_ID_PREFIX}${randomString()}`);
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(_: string, isReady?: boolean) {
@@ -43,40 +59,36 @@
 				version: config.version
 			});
 			FB.Event.subscribe('xfbml.render', function (_) {
-				// Here we know the SDK has loaded, even if onReady/onPlay
-				// is not called due to a video that cannot be embedded
-				dispatch('loaded');
+				onLoaded?.();
 			});
 			FB.Event.subscribe('xfbml.ready', function (msg) {
 				if (msg.type === 'video' && msg.id === playerID) {
 					player = msg.instance;
 					player.subscribe('startedPlaying', function () {
-						dispatch('play');
+						onPlay?.();
 					});
 					player.subscribe('paused', function () {
-						dispatch('pause');
+						onPause?.();
 					});
 					player.subscribe('finishedPlaying', function () {
-						dispatch('ended');
+						onEnded?.();
 					});
 					player.subscribe('startedBuffering', function () {
-						dispatch('buffer');
+						onBuffer?.();
 					});
 					player.subscribe('finishedBuffering', function () {
-						dispatch('bufferEnd');
+						onBufferEnd?.();
 					});
 					player.subscribe('error', function (error) {
-						dispatch('error', { error });
+						onError?.({ error });
 					});
 					if (muted) {
 						player.mute();
 					} else {
 						player.unmute();
 					}
-					dispatch('ready');
+					onReady?.();
 
-					// For some reason Facebook have added `visibility: hidden`
-					// to the iframe when autoplay fails, so here we set it back
 					const playerContainer = document.getElementById(playerID);
 					if (playerContainer !== null) {
 						const playerIframe = playerContainer.querySelector('iframe');

@@ -1,21 +1,34 @@
 <script lang="ts">
 	import type { GlobalSDKSoundCloudKey } from './global.types';
 	import type { SoundCloudPlayer } from './soundcloud.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { SoundCloudConfig } from './soundcloud.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK } from './utils';
 
-	export let url: string;
-	export let volume: number | null;
-	export let config: SoundCloudConfig;
-	export let display: string | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		volume: number | null;
+		config: SoundCloudConfig;
+		display?: string;
+	}
+
+	let {
+		url,
+		volume,
+		config,
+		display = undefined,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onEnded,
+		onError
+	}: Props = $props();
 
 	const SDK_URL = 'https://w.soundcloud.com/player/api.js';
 	const SDK_GLOBAL: GlobalSDKSoundCloudKey = 'SC';
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let iframeContainer: HTMLIFrameElement;
 	let player: SoundCloudPlayer;
@@ -25,7 +38,7 @@
 	let fractionLoaded = 0;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: string, isReady?: boolean) {
@@ -37,25 +50,24 @@
 			if (!isReady) {
 				player = SC.Widget(iframeContainer);
 				player.bind(PLAY, function () {
-					dispatch('play');
+					onPlay?.();
 				});
 				player.bind(PAUSE, function () {
 					const remaining = duration - currentTime;
 					if (remaining < 0.05) {
-						// Prevent onPause firing right before onEnded
 						return;
 					}
-					dispatch('pause');
+					onPause?.();
 				});
 				player.bind(PLAY_PROGRESS, function (e) {
 					currentTime = e.currentPosition / 1000;
 					fractionLoaded = e.loadedProgress;
 				});
 				player.bind(FINISH, function () {
-					dispatch('ended');
+					onEnded?.();
 				});
 				player.bind(ERROR, function (e) {
-					dispatch('error', { error: e });
+					onError?.({ error: e });
 				});
 			}
 
@@ -64,7 +76,7 @@
 				callback() {
 					player.getDuration(function (durationParam) {
 						duration = durationParam / 1000;
-						dispatch('ready');
+						onReady?.();
 					});
 				}
 			});

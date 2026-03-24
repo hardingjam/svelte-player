@@ -6,43 +6,82 @@
 		PlayerUrl,
 		Player,
 		PlayerRef,
-		PlayerDispatcher,
+		PlayerCallbackProps,
 		PlayerConfigProps,
 		PlayerGetPlayerKey,
 		PlayerInternalPlayer
 	} from './players/types';
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { isMediaStream } from './players/utils';
 
-	export let url: PlayerUrl;
-	export let playing: boolean;
-	export let loop: boolean;
-	export let controls: boolean;
-	export let volume: number | null;
-	export let muted: boolean;
-	export let playbackRate: number;
-	export let width: string;
-	export let height: string;
-	export let progressInterval: number;
-	export let playsinline: boolean;
-	export let pip: boolean;
-	export let stopOnUnmount: boolean;
-	export let config: PlayerConfigProps;
+	interface Props extends PlayerCallbackProps {
+		url: PlayerUrl;
+		playing: boolean;
+		loop: boolean;
+		controls: boolean;
+		volume: number | null;
+		muted: boolean;
+		playbackRate: number;
+		width: string;
+		height: string;
+		progressInterval: number;
+		playsinline: boolean;
+		pip: boolean;
+		stopOnUnmount: boolean;
+		config: PlayerConfigProps;
+		progressFrequency?: number;
+		disableDeferredLoading?: boolean;
+		loopOnEnded?: boolean;
+		forceLoad?: boolean;
+		display?: string;
+		activePlayer?: Player['loadComponent'];
+	}
 
-	export let progressFrequency: number | undefined = undefined;
-	export let disableDeferredLoading: boolean | undefined = undefined;
-	export let loopOnEnded: boolean | undefined = undefined;
-	export let forceLoad: boolean | undefined = undefined;
-	export let display: string | undefined = undefined;
-	export let activePlayer: Player['loadComponent'] | undefined = undefined;
+	let {
+		url,
+		playing,
+		loop,
+		controls,
+		volume,
+		muted,
+		playbackRate,
+		width,
+		height,
+		progressInterval,
+		playsinline,
+		pip,
+		stopOnUnmount,
+		config,
+		progressFrequency = undefined,
+		disableDeferredLoading = undefined,
+		loopOnEnded = undefined,
+		forceLoad = undefined,
+		display = undefined,
+		activePlayer = undefined,
+		onReady,
+		onStart,
+		onPlay,
+		onPause,
+		onBuffer,
+		onBufferEnd,
+		onSeek,
+		onEnded,
+		onError,
+		onProgress,
+		onDuration,
+		onEnablePIP,
+		onDisablePIP,
+		onPlaybackRateChange,
+		onPlaybackQualityChange,
+		onLoaded
+	}: Props = $props();
 
 	const SEEK_ON_PLAY_EXPIRY = 5000;
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let mounted = false;
 	let isReady = false;
-	let isPlaying = false; // Track playing state internally to prevent bugs
-	let isLoading = true; // Use isLoading to prevent onPause when switching URL
+	let isPlaying = false;
+	let isLoading = true;
 	let loadOnReady: PlayerUrl | null = null;
 	let seekOnPlay: number | null = null;
 	let progressTimeout: number | undefined = undefined;
@@ -72,7 +111,6 @@
 	});
 
 	function handlePropsUrlChange(propsUrl: typeof url) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -90,10 +128,12 @@
 		player.load(propsUrl, isReady);
 	}
 
-	$: handlePropsUrlChange(url);
+	$effect(() => {
+		url;
+		untrack(() => handlePropsUrlChange(url));
+	});
 
 	function handlePropsPlayingChange(propsPlaying: typeof playing) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -106,10 +146,12 @@
 		}
 	}
 
-	$: handlePropsPlayingChange(playing);
+	$effect(() => {
+		playing;
+		untrack(() => handlePropsPlayingChange(playing));
+	});
 
 	function handlePropsPipChange(propsPip: typeof pip) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -123,10 +165,12 @@
 		}
 	}
 
-	$: handlePropsPipChange(pip);
+	$effect(() => {
+		pip;
+		untrack(() => handlePropsPipChange(pip));
+	});
 
 	function handlePropsVolumeChange(propsVolume: typeof volume) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -136,10 +180,12 @@
 		}
 	}
 
-	$: handlePropsVolumeChange(volume);
+	$effect(() => {
+		volume;
+		untrack(() => handlePropsVolumeChange(volume));
+	});
 
 	function handlePropsMutedChange(propsMuted: typeof muted) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -149,7 +195,6 @@
 		} else {
 			player.unmute();
 			if (volume !== null) {
-				// Set volume next tick to fix a bug with DailyMotion
 				setTimeout(function () {
 					player.setVolume(Number(volume));
 				});
@@ -157,10 +202,12 @@
 		}
 	}
 
-	$: handlePropsMutedChange(muted);
+	$effect(() => {
+		muted;
+		untrack(() => handlePropsMutedChange(muted));
+	});
 
 	function handlePropsPlaybackRateChange(propsPlaybackRate: typeof playbackRate) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -170,10 +217,12 @@
 		}
 	}
 
-	$: handlePropsPlaybackRateChange(playbackRate);
+	$effect(() => {
+		playbackRate;
+		untrack(() => handlePropsPlaybackRateChange(playbackRate));
+	});
 
 	function handlePropsLoopChange(propsLoop: typeof loop) {
-		// If there isn’t a player available, don’t do anything
 		if (!player) {
 			return;
 		}
@@ -183,7 +232,10 @@
 		}
 	}
 
-	$: handlePropsLoopChange(loop);
+	$effect(() => {
+		loop;
+		untrack(() => handlePropsLoopChange(loop));
+	});
 
 	export function handlePlayerMount() {
 		player.load(url);
@@ -226,27 +278,28 @@
 			const loadedSeconds = getSecondsLoaded();
 			const duration = getDuration();
 			if (duration) {
-				const progress: OnProgressProps = {
+				const progressData: OnProgressProps = {
 					playedSeconds,
 					played: playedSeconds / duration
 				};
 				if (loadedSeconds !== null) {
-					progress.loadedSeconds = loadedSeconds;
-					progress.loaded = loadedSeconds / duration;
+					progressData.loadedSeconds = loadedSeconds;
+					progressData.loaded = loadedSeconds / duration;
 				}
-				// Only call onProgress if values have changed
-				if (progress.playedSeconds !== prevPlayed || progress.loadedSeconds !== prevLoaded) {
-					dispatch('progress', progress);
+				if (
+					progressData.playedSeconds !== prevPlayed ||
+					progressData.loadedSeconds !== prevLoaded
+				) {
+					onProgress?.(progressData);
 				}
-				prevPlayed = progress.playedSeconds;
-				prevLoaded = progress.loadedSeconds;
+				prevPlayed = progressData.playedSeconds;
+				prevLoaded = progressData.loadedSeconds;
 			}
 		}
 		progressTimeout = window.setTimeout(progress, progressFrequency || progressInterval);
 	}
 
 	export function seekTo(amount: number, type?: SeekToType, keepPlaying?: boolean) {
-		// When seeking before player is ready, store value and seek later
 		if (!isReady) {
 			if (amount !== 0) {
 				seekOnPlay = amount;
@@ -258,7 +311,6 @@
 		}
 		const isFraction = !type ? amount > 0 && amount < 1 : type === 'fraction';
 		if (isFraction) {
-			// Convert fraction to seconds based on duration
 			const duration = player.getDuration();
 			if (!duration) {
 				console.warn('SveltePlayer: could not seek using fraction - duration not yet available');
@@ -277,7 +329,7 @@
 
 		isReady = true;
 		isLoading = false;
-		dispatch('ready');
+		onReady?.();
 
 		if (!muted && volume !== null) {
 			player.setVolume(volume);
@@ -298,10 +350,10 @@
 			if (player.setPlaybackRate && playbackRate !== 1) {
 				player.setPlaybackRate(playbackRate);
 			}
-			dispatch('start');
+			onStart?.();
 			startOnPlay = false;
 		}
-		dispatch('play');
+		onPlay?.();
 		if (seekOnPlay) {
 			seekTo(seekOnPlay);
 			seekOnPlay = null;
@@ -312,7 +364,7 @@
 	export function handlePause() {
 		isPlaying = false;
 		if (!isLoading) {
-			dispatch('pause');
+			onPause?.();
 		}
 	}
 
@@ -322,13 +374,13 @@
 		}
 		if (!loop) {
 			isPlaying = false;
-			dispatch('ended');
+			onEnded?.();
 		}
 	}
 
-	function handleError(event: CustomEvent<OnErrorProps>) {
+	function handleError(error: OnErrorProps) {
 		isLoading = false;
-		dispatch('error', event.detail);
+		onError?.(error);
 	}
 
 	export function handleDurationCheck() {
@@ -336,7 +388,7 @@
 		const duration = getDuration();
 		if (duration) {
 			if (!onDurationCalled) {
-				dispatch('duration', duration);
+				onDuration?.(duration);
 				onDurationCalled = true;
 			}
 		} else {
@@ -345,8 +397,6 @@
 	}
 
 	function handleLoaded() {
-		// Sometimes we know loading has stopped but onReady/onPlay are never called
-		// so this provides a way for players to avoid getting stuck
 		isLoading = false;
 	}
 
@@ -417,8 +467,7 @@
 
 {#if activePlayer !== undefined}
 	{#await activePlayer() then { default: ActivePlayer }}
-		<svelte:component
-			this={ActivePlayer}
+		<ActivePlayer
 			{playing}
 			{controls}
 			{playsinline}
@@ -431,18 +480,18 @@
 			{volume}
 			{display}
 			bind:this={player}
-			on:mount={handlePlayerMount}
-			on:ready={handleReady}
-			on:play={handlePlay}
-			on:pause={handlePause}
-			on:ended={handleEnded}
-			on:loaded={handleLoaded}
-			on:error={handleError}
-			on:bufferEnd
-			on:buffer
-			on:playbackRateChange
-			on:seek
-			on:playbackQualityChange
+			onPlayerMount={handlePlayerMount}
+			onReady={handleReady}
+			onPlay={handlePlay}
+			onPause={handlePause}
+			onEnded={handleEnded}
+			onLoaded={handleLoaded}
+			onError={handleError}
+			{onBufferEnd}
+			{onBuffer}
+			{onPlaybackRateChange}
+			{onSeek}
+			{onPlaybackQualityChange}
 		/>
 	{/await}
 {/if}

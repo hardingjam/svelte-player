@@ -1,28 +1,30 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-unused-vars -- this is fine for documentation */
 	import type { NotImplementedPlayer } from './notimplemented.global.types';
-	import type { PlayerUrl, PlayerDispatcher } from './types';
+	import type { PlayerUrl, PlayerCallbackProps } from './types';
 	import type { NotImplementedConfig } from './notimplemented.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 
-	export const url: PlayerUrl | undefined = undefined;
-	export const playing: boolean | undefined = undefined;
-	export const loop: boolean | undefined = undefined;
-	export const controls: boolean | undefined = undefined;
-	export const volume: number | null = null;
-	export const muted: boolean | undefined = undefined;
-	export const width: string | undefined = undefined;
-	export const height: string | undefined = undefined;
-	export const playsinline: boolean | undefined = undefined;
-	export const config: NotImplementedConfig | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		url?: PlayerUrl;
+		playing?: boolean;
+		loop?: boolean;
+		controls?: boolean;
+		volume?: number | null;
+		muted?: boolean;
+		width?: string;
+		height?: string;
+		playsinline?: boolean;
+		config?: NotImplementedConfig;
+	}
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
+	let { onPlayerMount }: Props = $props();
 
 	let player: NotImplementedPlayer;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load(url: PlayerUrl, isReady?: boolean): void {
@@ -57,14 +59,10 @@
 		console.log('unmute');
 	}
 
-	// This function safe to remove the function
-	// if there is no implementation
 	export function setPlaybackRate(rate: number): void {
 		console.log('setPlaybackRate');
 	}
 
-	// This function safe to remove the function
-	// if there is no implementation
 	export function setLoop(loop: boolean): void {
 		console.log('setLoop');
 	}
@@ -81,14 +79,10 @@
 		return 0;
 	}
 
-	// This function safe to remove the function
-	// if there is no implementation
 	export function enablePIP(): void {
 		console.log('enablePIP');
 	}
 
-	// This function safe to remove the function
-	// if there is no implementation
 	export function disablePIP(): void {
 		console.log('disablePIP');
 	}

@@ -1,33 +1,50 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	const cache: Record<string, string> = {};
 </script>
 
 <script lang="ts">
-	import type { PreviewDispatcher } from './types';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
-	export let previewTabIndex: number;
-	export let url: string;
-	export let light: boolean | string;
-	export let oEmbedUrl: string;
-	export let isElementLight: boolean;
-	export let playIcon: boolean;
+	interface Props {
+		previewTabIndex: number;
+		url: string;
+		light: boolean | string;
+		oEmbedUrl: string;
+		isElementLight: boolean;
+		hasPlayIcon: boolean;
+		onclick?: (event: Event) => void;
+		lightSnippet?: Snippet;
+		playIconSnippet?: Snippet;
+	}
+
+	let {
+		previewTabIndex,
+		url,
+		light,
+		oEmbedUrl,
+		isElementLight,
+		hasPlayIcon,
+		onclick,
+		lightSnippet,
+		playIconSnippet
+	}: Props = $props();
 
 	const ICON_SIZE = '64px';
 
-	const dispatch = createEventDispatcher<PreviewDispatcher>();
-
-	let image: string | null = null;
+	let image: string | null = $state(null);
 
 	onMount(function () {
 		fetchImage({ url, light, oEmbedUrl });
 	});
 
-	function handleUrlLightChange(newUrl: typeof url, newLight: typeof light) {
-		fetchImage({ url: newUrl, light: newLight, oEmbedUrl });
-	}
-
-	$: handleUrlLightChange(url, light);
+	$effect(() => {
+		url;
+		light;
+		untrack(() => {
+			fetchImage({ url, light, oEmbedUrl });
+		});
+	});
 
 	type FetchImageParams = { url: typeof url; light: typeof light; oEmbedUrl: typeof oEmbedUrl };
 	function fetchImage({ url, light, oEmbedUrl }: FetchImageParams) {
@@ -61,7 +78,7 @@
 
 	function handleKeyPress(e: KeyboardEvent) {
 		if (e.key === 'Enter' || e.key === ' ') {
-			dispatch('click');
+			onclick?.(e);
 		}
 	}
 
@@ -70,7 +87,7 @@
 		align-items: center;
 		justify-content: center;
 	`;
-	$: preview = `
+	let preview = $derived(`
 		width: 100%;
 		height: 100%;
 		${image && !isElementLight ? `background-image: url(${image});` : ''} 
@@ -80,15 +97,15 @@
 		overflow: hidden;
 		position: relative;
 		${flexCenter}
-	`;
-	$: shadow = `
+	`);
+	let shadow = $derived(`
 		background: radial-gradient(rgb(0, 0, 0, 0.3), rgba(0, 0, 0, 0) 60%);
 		border-radius: ${ICON_SIZE};
 		width: ${ICON_SIZE};
 		height: ${ICON_SIZE};
 		${isElementLight ? 'position: absolute;' : ''}
 		${flexCenter}
-	`;
+	`);
 	const playIconStyle = `
 		border-style: solid;
 		border-width: 16px 0 16px 26px;
@@ -96,31 +113,32 @@
 		margin-left: 7px;
 	`;
 
-	$: playIconWrapperStyle = `
+	let playIconWrapperStyle = $derived(`
 		width: 100%;
 		position: absolute;
 		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		display: ${playIcon ? 'flex' : 'none'}
-	`;
+		display: ${hasPlayIcon ? 'flex' : 'none'}
+	`);
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	style={preview}
 	tabindex={previewTabIndex}
 	class="svelte-player__preview"
 	role="button"
-	on:click
-	on:keypress={handleKeyPress}
+	onclick={(e) => onclick?.(e)}
+	onkeypress={handleKeyPress}
 >
-	<slot name="light" />
+	{#if lightSnippet}{@render lightSnippet()}{/if}
 	<div style={playIconWrapperStyle}>
-		<slot name="play-icon" />
+		{#if playIconSnippet}{@render playIconSnippet()}{/if}
 	</div>
 
-	{#if !playIcon}
+	{#if !hasPlayIcon}
 		<div style={shadow} class="svelte-player__shadow">
 			<div style={playIconStyle} class="svelte-player__play-icon" />
 		</div>

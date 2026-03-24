@@ -2,8 +2,12 @@
 	import type { HTMLTrackAttributes } from 'svelte/elements';
 	import type { FileUrl } from './file.types';
 
-	export let url: FileUrl;
-	export let tracks: Omit<HTMLTrackAttributes, `on:${string}`>[];
+	interface Props {
+		url: FileUrl;
+		tracks: HTMLTrackAttributes[];
+	}
+
+	let { url, tracks }: Props = $props();
 </script>
 
 {#if url instanceof Array}

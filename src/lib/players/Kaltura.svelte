@@ -1,19 +1,22 @@
 <script lang="ts">
 	import type { GlobalSDKPlayerJSKey } from './global.types';
 	import type { PlayerJSPlayer } from './playerjs.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK } from './utils';
 
-	export let url: string;
-	export let loop: boolean;
-	export let muted: boolean;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		loop: boolean;
+		muted: boolean;
+	}
+
+	let { url, loop, muted, onPlayerMount, onReady, onPlay, onPause, onEnded, onError }: Props =
+		$props();
 
 	const SDK_URL = 'https://cdn.embed.ly/player-0.1.0.min.js';
 	const SDK_GLOBAL: GlobalSDKPlayerJSKey = 'playerjs';
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let iframeContainer: HTMLIFrameElement;
 	let player: PlayerJSPlayer;
@@ -23,7 +26,7 @@
 	let secondsLoaded: number | null = null;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load() {
@@ -37,8 +40,6 @@
 				player.setLoop?.(loop);
 
 				player.on('ready', function () {
-					// An arbitrary timeout is required otherwise
-					// the event listeners won’t work
 					setTimeout(function () {
 						player.isReady = true;
 						player.setLoop?.(loop);
@@ -46,12 +47,12 @@
 							player.mute();
 						}
 						addListeners(player);
-						dispatch('ready');
+						onReady?.();
 					}, 500);
 				});
 			},
 			function (error) {
-				dispatch('error', {
+				onError?.({
 					error
 				});
 			}
@@ -60,16 +61,16 @@
 
 	function addListeners(player: PlayerJSPlayer) {
 		player.on('play', function () {
-			dispatch('play');
+			onPlay?.();
 		});
 		player.on('pause', function () {
-			dispatch('pause');
+			onPause?.();
 		});
 		player.on('ended', function () {
-			dispatch('ended');
+			onEnded?.();
 		});
 		player.on('error', function (error) {
-			dispatch('error', {
+			onError?.({
 				error
 			});
 		});

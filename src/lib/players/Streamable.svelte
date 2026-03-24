@@ -1,20 +1,33 @@
 <script lang="ts">
 	import type { GlobalSDKPlayerJSKey } from './global.types';
 	import type { PlayerJSPlayer } from './playerjs.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { getSDK } from './utils';
 	import { MATCH_URL_STREAMABLE } from './patterns';
 
-	export let url: string;
-	export let loop: boolean;
-	export let muted: boolean;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		loop: boolean;
+		muted: boolean;
+	}
+
+	let {
+		url,
+		loop,
+		muted,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onSeek,
+		onEnded,
+		onError
+	}: Props = $props();
 
 	const SDK_URL = 'https://cdn.embed.ly/player-0.1.0.min.js';
 	const SDK_GLOBAL: GlobalSDKPlayerJSKey = 'playerjs';
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let iframeContainer: HTMLIFrameElement;
 	let player: PlayerJSPlayer;
@@ -24,7 +37,7 @@
 	let secondsLoaded: number | null = null;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load() {
@@ -38,22 +51,22 @@
 				player.setLoop?.(loop);
 
 				player.on('ready', function () {
-					dispatch('ready');
+					onReady?.();
 				});
 				player.on('play', function () {
-					dispatch('play');
+					onPlay?.();
 				});
 				player.on('pause', function () {
-					dispatch('pause');
+					onPause?.();
 				});
 				player.on('seeked', function () {
-					dispatch('seek', 0);
+					onSeek?.(0);
 				});
 				player.on('ended', function () {
-					dispatch('ended');
+					onEnded?.();
 				});
 				player.on('error', function (error) {
-					dispatch('error', {
+					onError?.({
 						error
 					});
 				});
@@ -71,7 +84,7 @@
 				}
 			},
 			function (error) {
-				dispatch('error', {
+				onError?.({
 					error
 				});
 			}
@@ -145,7 +158,7 @@
 		secondsLoaded = newSecondsLoaded;
 	}
 
-	$: id = url.match(MATCH_URL_STREAMABLE)?.[1];
+	let id = $derived(url.match(MATCH_URL_STREAMABLE)?.[1]);
 </script>
 
 <iframe

@@ -1,6 +1,6 @@
-import type { SvelteComponent } from 'svelte';
+import type { Component } from 'svelte';
 
-import type { RecursivePartial, Constructor } from './utility.types';
+import type { RecursivePartial } from './utility.types';
 import type { YTPlayerOnPlaybackQualityChangeEvent, YTPlayer } from './youtube.global.types';
 export type { YTPlayer } from './youtube.global.types';
 import type { TwitchPlayer } from './twitch.global.types';
@@ -121,6 +121,26 @@ export type PlayerDispatcher = {
 	loaded: undefined;
 };
 
+export type PlayerCallbackProps = {
+	onPlayerMount?: () => void;
+	onReady?: () => void;
+	onStart?: () => void;
+	onPlay?: () => void;
+	onProgress?: (progress: OnProgressProps) => void;
+	onDuration?: (duration: number | null) => void;
+	onPause?: () => void;
+	onBuffer?: () => void;
+	onBufferEnd?: () => void;
+	onSeek?: (time: number | [number, number]) => void;
+	onEnded?: () => void;
+	onError?: (error: OnErrorProps) => void;
+	onEnablePIP?: () => void;
+	onDisablePIP?: () => void;
+	onPlaybackRateChange?: (rate: number) => void;
+	onPlaybackQualityChange?: (event: YTPlayerOnPlaybackQualityChangeEvent) => void;
+	onLoaded?: () => void;
+};
+
 export type PlayerConfigProps = RecursivePartial<PlayerConfigValue>;
 
 export type PlayerProps = {
@@ -164,7 +184,8 @@ export type PlayerRef = {
 	getPlayer<TKey extends PlayerGetPlayerKey>(key?: TKey): PlayerInternalPlayer[TKey] | null;
 };
 
-export type PlayerComponent = Constructor<SvelteComponent<Partial<PlayerProps>> & PlayerRef>;
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component types vary per player */
+export type PlayerComponent = Component<any, any>;
 
 export type Player = {
 	key: PlayerKey;

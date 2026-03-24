@@ -1,32 +1,49 @@
 <script lang="ts">
 	import type { GlobalSDKWistiaKey } from './global.types';
 	import type { WistiaPlayer } from './wistia.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { WistiaConfig } from './wistia.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { MATCH_URL_WISTIA } from './patterns';
 	import { randomString, getSDK } from './utils';
 
-	export let url: string;
-	export let playing: boolean;
-	export let controls: boolean;
-	export let muted: boolean;
-	export let config: WistiaConfig;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		playing: boolean;
+		controls: boolean;
+		muted: boolean;
+		config: WistiaConfig;
+	}
+
+	let {
+		url,
+		playing,
+		controls,
+		muted,
+		config,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onSeek,
+		onEnded,
+		onError,
+		onPlaybackRateChange
+	}: Props = $props();
 
 	const SDK_URL = 'https://fast.wistia.com/assets/external/E-v1.js';
 	const SDK_GLOBAL: GlobalSDKWistiaKey = 'Wistia';
 	const PLAYER_ID_PREFIX = 'wistia-player-';
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
-
 	let player: WistiaPlayer;
 
-	$: ({ playerId } = config);
-	$: playerID = playerId || `${PLAYER_ID_PREFIX}${randomString()}`;
+	let playerID = $derived(config.playerId || `${PLAYER_ID_PREFIX}${randomString()}`);
+	let videoID = $derived(url && url.match(MATCH_URL_WISTIA)?.[1]);
+	let className = $derived(`wistia_embed wistia_async_${videoID} wistia-player`);
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load() {
@@ -57,44 +74,43 @@
 					onReady(video) {
 						player = video;
 						unbind();
-						player.bind('play', onPlay);
-						player.bind('pause', onPause);
-						player.bind('seek', onSeek);
-						player.bind('end', onEnded);
-						player.bind('playbackratechange', onPlaybackRateChange);
-						dispatch('ready');
+						player.bind('play', handlePlay);
+						player.bind('pause', handlePause);
+						player.bind('seek', handleSeek);
+						player.bind('end', handleEnded);
+						player.bind('playbackratechange', handlePlaybackRateChange);
+						onReady?.();
 					}
 				});
 			},
 			function (error) {
-				dispatch('error', { error });
+				onError?.({ error });
 			}
 		);
 	}
 
 	function unbind() {
-		player.unbind('play', onPlay);
-		player.unbind('pause', onPause);
-		player.unbind('seek', onSeek);
-		player.unbind('end', onEnded);
-		player.unbind('playbackratechange', onPlaybackRateChange);
+		player.unbind('play', handlePlay);
+		player.unbind('pause', handlePause);
+		player.unbind('seek', handleSeek);
+		player.unbind('end', handleEnded);
+		player.unbind('playbackratechange', handlePlaybackRateChange);
 	}
 
-	// Proxy methods to prevent listener leaks
-	function onPlay() {
-		dispatch('play');
+	function handlePlay() {
+		onPlay?.();
 	}
-	function onPause() {
-		dispatch('pause');
+	function handlePause() {
+		onPause?.();
 	}
-	function onSeek(currentTime: number, _: number) {
-		dispatch('seek', currentTime);
+	function handleSeek(currentTime: number, _: number) {
+		onSeek?.(currentTime);
 	}
-	function onEnded() {
-		dispatch('ended');
+	function handleEnded() {
+		onEnded?.();
 	}
-	function onPlaybackRateChange(rate: number) {
-		dispatch('playbackRateChange', rate);
+	function handlePlaybackRateChange(rate: number) {
+		onPlaybackRateChange?.(rate);
 	}
 
 	export function play() {
@@ -152,9 +168,6 @@
 	export function _setPlayer(newPlayer: WistiaPlayer) {
 		player = newPlayer;
 	}
-
-	$: videoID = url && url.match(MATCH_URL_WISTIA)?.[1];
-	$: className = `wistia_embed wistia_async_${videoID} wistia-player`;
 </script>
 
 <div id={playerID} class={className} />

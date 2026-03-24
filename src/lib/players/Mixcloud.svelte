@@ -1,20 +1,22 @@
 <script lang="ts">
 	import type { GlobalSDKMixcloudKey } from './global.types';
 	import type { MixcloudWidget } from './mixcloud.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { MixcloudConfig } from './mixcloud.types';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { queryString, getSDK } from './utils';
 	import { MATCH_URL_MIXCLOUD } from './patterns';
 
-	export let url: string;
-	export let config: MixcloudConfig;
+	interface Props extends PlayerCallbackProps {
+		url: string;
+		config: MixcloudConfig;
+	}
+
+	let { url, config, onPlayerMount, onReady, onPlay, onPause, onEnded, onError }: Props = $props();
 
 	const SDK_URL = 'https://widget.mixcloud.com/media/js/widgetApi.js';
 	const SDK_GLOBAL: GlobalSDKMixcloudKey = 'Mixcloud';
-
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
 
 	let iframeContainer: HTMLIFrameElement;
 	let player: MixcloudWidget;
@@ -23,7 +25,7 @@
 	let currentTime: number | null = null;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	export function load() {
@@ -32,16 +34,16 @@
 				player = Mixcloud.PlayerWidget(iframeContainer);
 				player.ready.then(function () {
 					player.events.play.on(function () {
-						dispatch('play');
+						onPlay?.();
 					});
 					player.events.pause.on(function () {
-						dispatch('pause');
+						onPause?.();
 					});
 					player.events.ended.on(function () {
-						dispatch('ended');
+						onEnded?.();
 					});
 					player.events.error.on(function (error) {
-						dispatch('error', {
+						onError?.({
 							error
 						});
 					});
@@ -49,11 +51,11 @@
 						currentTime = seconds;
 						duration = durationParam;
 					});
-					dispatch('ready');
+					onReady?.();
 				});
 			},
 			function (error) {
-				dispatch('error', {
+				onError?.({
 					error
 				});
 			}
@@ -119,12 +121,13 @@
 		currentTime = newCurrentTime;
 	}
 
-	$: id = url.match(MATCH_URL_MIXCLOUD)?.[1];
-	$: ({ options } = config);
-	$: query = queryString({
-		...options,
-		feed: `/${id}/`
-	});
+	let id = $derived(url.match(MATCH_URL_MIXCLOUD)?.[1]);
+	let query = $derived(
+		queryString({
+			...config.options,
+			feed: `/${id}/`
+		})
+	);
 </script>
 
 <iframe

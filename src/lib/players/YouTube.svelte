@@ -1,19 +1,40 @@
 <script lang="ts">
 	import type { GlobalSDKYTKey } from './global.types';
 	import type { YTPlayer, YTPlayerOnStateChangeEvent, YTSDKReady } from './youtube.global.types';
-	import type { PlayerDispatcher } from './types';
+	import type { PlayerCallbackProps } from './types';
 	import type { ParsePlaylistFn, YouTubeConfig, YouTubeUrl } from './youtube.types';
 
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { MATCH_URL_YOUTUBE } from './patterns';
 	import { getSDK, parseEndTime, parseStartTime } from './utils';
 
-	export let playing: boolean;
-	export let loop: boolean;
-	export let controls: boolean;
-	export let playsinline: boolean;
-	export let config: YouTubeConfig;
-	export let display: string | undefined = undefined;
+	interface Props extends PlayerCallbackProps {
+		playing: boolean;
+		loop: boolean;
+		controls: boolean;
+		playsinline: boolean;
+		config: YouTubeConfig;
+		display?: string;
+	}
+
+	let {
+		playing,
+		loop,
+		controls,
+		playsinline,
+		config,
+		display = undefined,
+		onPlayerMount,
+		onReady,
+		onPlay,
+		onPause,
+		onBuffer,
+		onBufferEnd,
+		onEnded,
+		onError,
+		onPlaybackRateChange,
+		onPlaybackQualityChange
+	}: Props = $props();
 
 	const SDK_URL = 'https://www.youtube.com/iframe_api';
 	const SDK_GLOBAL: GlobalSDKYTKey = 'YT';
@@ -21,13 +42,11 @@
 	const MATCH_PLAYLIST = /[?&](?:list|channel)=([a-zA-Z0-9_-]+)/;
 	const MATCH_USER_UPLOADS = /user\/([a-zA-Z0-9_-]+)\/?/;
 
-	const dispatch = createEventDispatcher<PlayerDispatcher>();
-
 	let container: HTMLDivElement;
 	let player: YTPlayer;
 
 	onMount(function () {
-		dispatch('mount');
+		onPlayerMount?.();
 	});
 
 	function getID(url: YouTubeUrl) {
@@ -79,17 +98,17 @@
 							if (loop) {
 								player.setLoop(true);
 							}
-							dispatch('ready');
+							onReady?.();
 						},
 						onPlaybackRateChange(event) {
-							dispatch('playbackRateChange', event.data);
+							onPlaybackRateChange?.(event.data);
 						},
 						onPlaybackQualityChange(event) {
-							dispatch('playbackQualityChange', event);
+							onPlaybackQualityChange?.(event);
 						},
 						onStateChange,
 						onError(event) {
-							dispatch('error', {
+							onError?.({
 								error: event.data
 							});
 						}
@@ -98,7 +117,7 @@
 				});
 			},
 			function (err) {
-				dispatch('error', {
+				onError?.({
 					error: err
 				});
 			}
@@ -142,18 +161,17 @@
 			onUnstarted();
 		}
 		if (data === PLAYING) {
-			dispatch('play');
-			dispatch('bufferEnd');
+			onPlay?.();
+			onBufferEnd?.();
 		}
 		if (data === PAUSED) {
-			dispatch('pause');
+			onPause?.();
 		}
 		if (data === BUFFERING) {
-			dispatch('buffer');
+			onBuffer?.();
 		}
 		if (data === ENDED) {
 			const isPlaylist = !!player.getPlaylist();
-			// Only loop manually if not playing a playlist
 			if (loop && !isPlaylist) {
 				if (playerVars.start) {
 					seekTo(playerVars.start);
@@ -161,10 +179,10 @@
 					play();
 				}
 			}
-			dispatch('ended');
+			onEnded?.();
 		}
 		if (data === CUED) {
-			dispatch('ready');
+			onReady?.();
 		}
 	}
 

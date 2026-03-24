@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import type { Player as PlayerType } from './players/types';
 	import players from './players';
 
@@ -32,7 +32,12 @@
 </script>
 
 <script lang="ts">
-	import type { PlayerMediaRef, SeekToType, SveltePlayerDispatcher } from './types';
+	import type {
+		PlayerMediaRef,
+		SeekToType,
+		SveltePlayerCallbackProps,
+		SveltePlayerSnippetProps
+	} from './types';
 	import type { RecursivePartial } from './players/utility.types';
 	import type {
 		PlayerUrl,
@@ -42,45 +47,87 @@
 		PlayerInternalPlayer
 	} from './players/types';
 
-	import { createEventDispatcher } from 'svelte';
 	import merge from 'deepmerge';
 	import memoize from 'memoize-one';
 	import Player from './PlayerMedia.svelte';
 	import Preview from './Preview.svelte';
 	import { defaultConfig } from './props';
 
+	interface Props extends SveltePlayerCallbackProps, SveltePlayerSnippetProps {
+		url: PlayerUrl;
+		playing?: boolean;
+		loop?: boolean;
+		controls?: boolean;
+		light?: boolean | string;
+		volume?: number | null;
+		muted?: boolean;
+		playbackRate?: number;
+		width?: string;
+		height?: string;
+		progressInterval?: number;
+		playsinline?: boolean;
+		pip?: boolean;
+		stopOnUnmount?: boolean;
+		previewTabIndex?: number;
+		config?: RecursivePartial<PlayerConfig>;
+		oEmbedUrl?: string;
+		progressFrequency?: number;
+		display?: string;
+	}
+
+	let {
+		url,
+		playing = false,
+		loop = false,
+		controls = false,
+		light: lightProp = false,
+		volume = null,
+		muted = false,
+		playbackRate = 1,
+		width = '640px',
+		height = '360px',
+		progressInterval = 1000,
+		playsinline = false,
+		pip = false,
+		stopOnUnmount = true,
+		previewTabIndex = 0,
+		config = {},
+		oEmbedUrl = 'https://noembed.com/embed?url={url}',
+		progressFrequency = undefined,
+		display = undefined,
+		onReady,
+		onStart,
+		onPlay,
+		onPause,
+		onBuffer,
+		onBufferEnd,
+		onSeek,
+		onEnded,
+		onError,
+		onProgress,
+		onDuration,
+		onEnablePIP,
+		onDisablePIP,
+		onPlaybackRateChange,
+		onPlaybackQualityChange,
+		onClickPreview,
+		lightSnippet,
+		playIconSnippet
+	}: Props = $props();
+
 	export const someValue = 123;
 
-	export let url: PlayerUrl;
-	export let playing = false;
-	export let loop = false;
-	export let controls = false;
-	export let light: boolean = false;
-	export let volume: number | null = null;
-	export let muted = false;
-	export let playbackRate = 1;
-	export let width = '640px';
-	export let height = '360px';
-	export let progressInterval = 1000;
-	export let playsinline = false;
-	export let pip = false;
-	export let stopOnUnmount = true;
-	export let previewTabIndex = 0;
-	export let config: RecursivePartial<PlayerConfig> = {};
-	export let oEmbedUrl = 'https://noembed.com/embed?url={url}';
-
-	export let progressFrequency: number | undefined = undefined;
-	export let display: string | undefined = undefined;
-
-	const dispatch = createEventDispatcher<SveltePlayerDispatcher>();
-
 	let playerRef: PlayerMediaRef;
-	let isElementLight = !!$$slots['light'];
-	let showPreviewState = !!light || isElementLight;
+	let isElementLight = !!playIconSnippet || !!lightSnippet;
+	let showPreviewState = $state(!!lightProp || isElementLight);
 
 	function handleClickPreview(e: Event) {
 		showPreviewState = false;
-		dispatch('clickPreview', e);
+		onClickPreview?.();
+	}
+
+	function handleReady() {
+		onReady?.();
 	}
 
 	export function showPreview() {
@@ -124,10 +171,6 @@
 		playerRef.seekTo(fraction, type, keepPlaying);
 	}
 
-	export function handleReady() {
-		dispatch('ready');
-	}
-
 	function getConfig<TUrl extends PlayerUrl, TKey extends string>(
 		configUrl: TUrl,
 		configKey: TKey
@@ -151,17 +194,16 @@
 {#if showPreviewState}
 	{#if url}
 		<Preview
-			{light}
+			light={lightProp}
 			{previewTabIndex}
 			{oEmbedUrl}
 			url={typeof url !== 'string' ? '' : url}
-			playIcon={$$slots['play-icon']}
+			hasPlayIcon={!!playIconSnippet}
 			{isElementLight}
-			on:click={handleClickPreview}
-		>
-			<slot name="light" slot="light" />
-			<slot name="play-icon" slot="play-icon" />
-		</Preview>
+			onclick={handleClickPreview}
+			{lightSnippet}
+			{playIconSnippet}
+		/>
 	{/if}
 {:else}
 	{#each [...customPlayers, ...players] as player}
@@ -187,18 +229,18 @@
 				config={getConfig(url, player.key)}
 				activePlayer={player.loadComponent}
 				bind:this={playerRef}
-				on:ready={handleReady}
-				on:start
-				on:play
-				on:pause
-				on:buffer
-				on:playbackRateChange
-				on:seek
-				on:ended
-				on:error
-				on:progress
-				on:duration
-				on:playbackQualityChange
+				onReady={handleReady}
+				{onStart}
+				{onPlay}
+				{onPause}
+				{onBuffer}
+				{onPlaybackRateChange}
+				{onSeek}
+				{onEnded}
+				{onError}
+				{onProgress}
+				{onDuration}
+				{onPlaybackQualityChange}
 			/>
 		{/if}
 	{/each}

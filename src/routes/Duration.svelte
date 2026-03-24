@@ -1,5 +1,9 @@
 <script lang="ts">
-	export let seconds: number;
+	interface Props {
+		seconds: number;
+	}
+
+	let { seconds }: Props = $props();
 
 	function format(seconds: number) {
 		const date = new Date(seconds * 1000);
