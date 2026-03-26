@@ -1,10 +1,10 @@
 {
-	"name": "svelte-player",
-	"version": "0.0.21",
+	"name": "svelte-5-player",
+	"version": "0.0.2",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/fikryfahrezy/svelte-player.git"
+		"url": "git+https://github.com/hardingjam/svelte-player.git"
 	},
 	"keywords": [
 		"svelte",
@@ -36,8 +36,7 @@
 		"test:unit:watch": "vitest watch",
 		"lint": "prettier --plugin-search-dir . --check . && eslint .",
 		"lint-staged": "lint-staged",
-		"format": "prettier --plugin-search-dir . --write .",
-		"prepare": "husky install"
+		"format": "prettier --plugin-search-dir . --write ."
 	},
 	"exports": {
 		".": {
@@ -65,7 +64,6 @@
 		"eslint": "^8.54.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-svelte": "^2.35.1",
-		"husky": "^8.0.3",
 		"jsdom": "^23.0.0",
 		"lint-staged": "^15.1.0",
 		"prettier": "^3.1.0",

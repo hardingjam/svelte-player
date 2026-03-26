@@ -77,6 +77,7 @@
 	}
 
 	function handleProgress(state: OnProgressProps) {
+		console.log('handleProgress', state);
 		if (!seeking && state.loaded !== undefined && state.played !== undefined) {
 			loaded = state.loaded;
 			played = state.played;
@@ -112,10 +113,10 @@
 				{light}
 				bind:this={playerRef}
 				onReady={function () {
-					// console.log('onReady');
+					console.log('onReady');
 				}}
 				onStart={function () {
-					// console.log('onStart');
+					console.log('onStart');
 				}}
 				onPlay={handlePlay}
 				onPause={handlePause}
@@ -124,7 +125,7 @@
 				}}
 				onPlaybackRateChange={handleOnPlaybackRateChange}
 				onSeek={(_) => {
-					// console.log('onSeek', e);
+					console.log('onSeek', _);
 				}}
 				onEnded={handleEnded}
 				onError={(_) => {

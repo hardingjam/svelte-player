@@ -1,0 +1,7 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(node -e \"const pkg = require\\(''/Users/jharding/svelte-player/node_modules/svelte/package.json''\\); console.log\\(JSON.stringify\\(pkg.exports[''.''], null, 2\\)\\)\")"
+		]
+	}
+}

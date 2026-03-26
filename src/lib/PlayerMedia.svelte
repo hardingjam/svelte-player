@@ -238,8 +238,11 @@
 	});
 
 	export function handlePlayerMount() {
-		player.load(url);
-		progress();
+		Promise.resolve().then(() => {
+			if (!player) return;
+			player.load(url);
+			progress();
+		});
 	}
 
 	export function getDuration() {
